@@ -21,6 +21,6 @@
   },
   "require": {
     "php": "^7.0",
-    "fabstract/assert": "^0.1.1"
+    "fabstract/assert": "^0.1.0"
   }
 }
