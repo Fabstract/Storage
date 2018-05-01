@@ -1,26 +1,25 @@
 <?php
 
+/** @noinspection PhpUnhandledExceptionInspection */
+
+/** @noinspection PhpDocMissingThrowsInspection */
+
 namespace Fabstract\Component\Storage\Redis;
 
+use Fabstract\Component\Assert\Assert;
 use Fabstract\Component\Storage\Exception\Exception;
 use Fabstract\Component\Storage\SerializerInterface;
+use Fabstract\Component\Storage\SimpleStorageSerializer;
 use Fabstract\Component\Storage\StorageInterface;
 
-class RedisStorage implements StorageInterface, SerializerInterface
+class RedisStorage implements StorageInterface
 {
-    /**
-     * @var SerializerInterface
-     */
+    /** @var SerializerInterface */
     private $serializer = null;
-    /**
-     * @var \Redis
-     */
-    private $redis = null;
-
-    /**
-     * @var RedisConfigModel
-     */
+    /** @var RedisConfigModel */
     private $config = null;
+    /** @var \Redis */
+    private $redis = null;
 
     /**
      * RedisStorage constructor.
@@ -29,15 +28,24 @@ class RedisStorage implements StorageInterface, SerializerInterface
      */
     public function __construct($config, $serializer = null)
     {
+        Assert::isType($config, RedisConfigModel::class, 'config');
+        if ($serializer !== null) {
+            Assert::isImplements($serializer, SerializerInterface::class, 'serializer');
+        }
+
         $this->config = $config;
-        $this->serializer = $serializer;
+
+        if ($serializer === null) {
+            $this->serializer = new SimpleStorageSerializer();
+        } else {
+            $this->serializer = $serializer;
+        }
     }
 
     /**
      * @param string|int $key
      * @param string $value
      * @param int $lifetime
-     * @return bool
      * @throws Exception
      */
     public function set($key, $value, $lifetime = 0)
@@ -45,14 +53,13 @@ class RedisStorage implements StorageInterface, SerializerInterface
         $redis = $this->getRedis();
         $serializer = $this->getSerializer();
 
-        $key = $this->getKeyWithPrefix($key);
-
         $content = $serializer->serialize($value);
 
         if ($lifetime <= 0) {
             $lifetime = $this->config->lifetime;
         }
 
+        $key = $this->getKeyWithPrefix($key);
         if ($lifetime > 0) {
             $saved = $redis->setex($key, $lifetime, $content);
         } else {
@@ -62,7 +69,6 @@ class RedisStorage implements StorageInterface, SerializerInterface
         if (!$saved) {
             throw new Exception('Failed storing the data in redis');
         }
-        return true;
     }
 
     /**
@@ -118,38 +124,15 @@ class RedisStorage implements StorageInterface, SerializerInterface
      */
     public function getSerializer()
     {
-        if ($this->serializer === null) {
-            $this->serializer = $this;
-        }
-
         return $this->serializer;
     }
 
     /**
-     * @param mixed $data
-     * @return string
-     */
-    public function serialize($data)
-    {
-        return $data;
-    }
-
-    /**
-     * @param string $data
-     * @return mixed
-     */
-    public function deserialize($data)
-    {
-        return $data;
-    }
-
-    /**
      * @return \Redis
-     * @throws Exception
      */
     private function getRedis()
     {
-        if ($this->redis == null) {
+        if ($this->redis === null) {
             $redis = new \Redis();
 
             if ($this->config->persistent) {
