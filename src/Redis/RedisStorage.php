@@ -46,6 +46,7 @@ class RedisStorage implements StorageInterface
      * @param string|int $key
      * @param string $value
      * @param int $lifetime
+     * @return bool
      * @throws Exception
      */
     public function set($key, $value, $lifetime = 0)
@@ -69,6 +70,8 @@ class RedisStorage implements StorageInterface
         if (!$saved) {
             throw new Exception('Failed storing the data in redis');
         }
+
+        return true; // return true means success
     }
 
     /**
